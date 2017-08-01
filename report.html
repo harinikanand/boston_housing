@@ -12193,7 +12193,9 @@ An increase in 'RM' would result in an increase in the price of the house. Reaso
 </div>
 <div class="inner_cell">
 <div class="text_cell_render border-box-sizing rendered_html">
-<p><strong>Answer: Using the right ratio of training and testing data subsets help with identifying if a problem is suffering from overfitting or underfitting, which is done by determining the CV error amd comparing it with training error.</strong></p>
+<p>**Answer: Using the right ratio of training and testing data subsets help with identifying if a problem is suffering from overfitting or underfitting, which is done by determining the testing error amd comparing it with training error.</p>
+<p>Using the training set, the model is trained. The test data is used to evaluate the model.
+Separately the training and testing data helps with ensuring the data that is used to train the model and to test the model come from different pools.**</p>
 
 </div>
 </div>
@@ -13856,7 +13858,19 @@ number of jobs to run</p>
 <div class="text_cell_render border-box-sizing rendered_html">
 <p>**Answer: k-fold creates k groups of the sample data. A model is trained using k-1 folds as training data;
 the resulting model is validated on the remaining part of the data.</p>
-<p>The benefit of using k-Fold with GridSerachCV helps with validation of the model using different combinations of data. This allows GridSearchCV to optimize the model using different groups or subsets of the sample data when training.**</p>
+<p>The benefit of using k-Fold with GridSerachCV helps with validation of the model using different combinations of data. This allows GridSearchCV to optimize the model using different groups or subsets of the sample data when training.</p>
+<p>Which data set will be split by GridSearchCV, the whole dataset or only the training data set (Hint: reg = fit_model(X_train, y_train))?</p>
+<p>Answer: Only the training data set is used by GridSearchCV.</p>
+<p>If we use the default Kfold method, the data will be split randomly or sequentially?</p>
+<p>Answer: The default Kfold method only splits the data sequentially. However, for splitting the data randomly, the variables shuffle and random need to be set.</p>
+<p>After we run k times and get k validation scores, how do we use these scores to help us find the best combination of parameters?</p>
+<p>Answer: By evaluating the R2_scores on the K runs, we could identify those parameters used in GridSearchCV that resulted in a R2_score that is closest to 1.</p>
+<p>Why K-fold cross validation is helpful to grid search? We can split the training data into 8:2 training/validation set and train each parameter combination on the training set and get its score on the validation set to find the best. What are the main drawbacks of grid search which are hinged upon using this particular method and how k-fold cv could help alleviate that?</p>
+<p>Answer: Suppose the training set comes from different data sources which provide some variations in the data, by simply splitting (without shuffling) the training set into 8:2 training/validation sets, what could happen is that the model would not pick up the nuances in the data from a particular source if all that falls in the last 20%.</p>
+<p>GridSearchCV in that case would also use the same 8:2 training/validation sets and parameter combinations applied would not help the model learn the variations in the data in the validation set.</p>
+<p>By using shuffleset with GridSearchCV, in addtion to parameter combinations for the regressor, 
+a shuffled data would help the model learn all the nuances of the data and perform better on the validation set resulting in better R2_score.
+**</p>
 
 </div>
 </div>
@@ -13893,12 +13907,14 @@ For the <code>fit_model</code> function in the code cell below, you will need to
 </div>
 <div class="cell border-box-sizing code_cell rendered">
 <div class="input">
-<div class="prompt input_prompt">In&nbsp;[35]:</div>
+<div class="prompt input_prompt">In&nbsp;[50]:</div>
 <div class="inner_cell">
     <div class="input_area">
 <div class=" highlight hl-ipython2"><pre><span></span><span class="kn">from</span> <span class="nn">sklearn.tree</span> <span class="kn">import</span> <span class="n">DecisionTreeRegressor</span> 
 <span class="kn">from</span> <span class="nn">sklearn.metrics</span> <span class="kn">import</span> <span class="n">make_scorer</span> 
-<span class="kn">from</span> <span class="nn">sklearn.grid_search</span> <span class="kn">import</span> <span class="n">GridSearchCV</span> 
+<span class="c1">#from sklearn.grid_search import GridSearchCV </span>
+<span class="kn">from</span> <span class="nn">sklearn.model_selection</span> <span class="kn">import</span> <span class="n">RandomizedSearchCV</span>
+
 
 <span class="k">def</span> <span class="nf">fit_model</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot; Performs grid search over the &#39;max_depth&#39; parameter for a </span>
@@ -13913,18 +13929,19 @@ For the <code>fit_model</code> function in the code cell below, you will need to
     <span class="n">regressor</span> <span class="o">=</span> <span class="n">DecisionTreeRegressor</span><span class="p">()</span>
 
   
-    <span class="n">params</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;max_depth&#39;</span><span class="p">:</span><span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">10</span><span class="p">)}</span>
+    <span class="n">params</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;max_depth&#39;</span><span class="p">:</span><span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">11</span><span class="p">)}</span>
 
     
     <span class="n">scoring_fnc</span> <span class="o">=</span> <span class="n">make_scorer</span><span class="p">(</span><span class="n">performance_metric</span><span class="p">)</span>
 
-    <span class="n">grid</span> <span class="o">=</span> <span class="n">GridSearchCV</span><span class="p">(</span><span class="n">regressor</span><span class="p">,</span> <span class="n">params</span><span class="p">,</span> <span class="n">scoring_fnc</span><span class="p">,</span><span class="n">cv</span><span class="o">=</span><span class="n">cv_sets</span><span class="p">)</span>
-
+    <span class="c1">#grid = GridSearchCV(regressor, params, scoring_fnc,cv=cv_sets)</span>
+    <span class="n">random_search</span> <span class="o">=</span> <span class="n">RandomizedSearchCV</span><span class="p">(</span><span class="n">regressor</span><span class="p">,</span> <span class="n">param_distributions</span><span class="o">=</span><span class="n">params</span><span class="p">,</span> <span class="n">scoring</span><span class="o">=</span><span class="n">scoring_fnc</span><span class="p">,</span> <span class="n">cv</span><span class="o">=</span><span class="n">cv_sets</span><span class="p">)</span>
+    
     <span class="c1"># Fit the grid search object to the data to compute the optimal model</span>
-    <span class="n">grid</span> <span class="o">=</span> <span class="n">grid</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">)</span>
-
+    <span class="n">random_search</span> <span class="o">=</span> <span class="n">random_search</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">)</span>
+    
     <span class="c1"># Return the optimal model after fitting the data</span>
-    <span class="k">return</span> <span class="n">grid</span><span class="o">.</span><span class="n">best_estimator_</span>
+    <span class="k">return</span> <span class="n">random_search</span><span class="o">.</span><span class="n">best_estimator_</span>
 </pre></div>
 
 </div>
@@ -13957,7 +13974,7 @@ For the <code>fit_model</code> function in the code cell below, you will need to
 </div>
 <div class="cell border-box-sizing code_cell rendered">
 <div class="input">
-<div class="prompt input_prompt">In&nbsp;[36]:</div>
+<div class="prompt input_prompt">In&nbsp;[51]:</div>
 <div class="inner_cell">
     <div class="input_area">
 <div class=" highlight hl-ipython2"><pre><span></span><span class="c1"># Fit the training data to the model using grid search</span>
@@ -14046,7 +14063,7 @@ For the <code>fit_model</code> function in the code cell below, you will need to
 </div>
 <div class="cell border-box-sizing code_cell rendered">
 <div class="input">
-<div class="prompt input_prompt">In&nbsp;[33]:</div>
+<div class="prompt input_prompt">In&nbsp;[52]:</div>
 <div class="inner_cell">
     <div class="input_area">
 <div class=" highlight hl-ipython2"><pre><span></span><span class="c1"># Produce a matrix for client data</span>
@@ -14108,7 +14125,7 @@ Predicted selling price for Client 3&#39;s home: $910,350.00
 </div>
 <div class="cell border-box-sizing code_cell rendered">
 <div class="input">
-<div class="prompt input_prompt">In&nbsp;[34]:</div>
+<div class="prompt input_prompt">In&nbsp;[53]:</div>
 <div class="inner_cell">
     <div class="input_area">
 <div class=" highlight hl-ipython2"><pre><span></span><span class="n">vs</span><span class="o">.</span><span class="n">PredictTrials</span><span class="p">(</span><span class="n">features</span><span class="p">,</span> <span class="n">prices</span><span class="p">,</span> <span class="n">fit_model</span><span class="p">,</span> <span class="n">client_data</span><span class="p">)</span>
